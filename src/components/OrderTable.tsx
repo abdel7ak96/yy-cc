@@ -1,17 +1,19 @@
-import { useState, Fragment } from 'react';
+import { useState, Fragment, useMemo } from 'react';
 import { ColorPaletteProp } from '@mui/joy/styles';
-import Avatar from '@mui/joy/Avatar';
-import Box from '@mui/joy/Box';
-import Chip from '@mui/joy/Chip';
-import FormControl from '@mui/joy/FormControl';
-import FormLabel from '@mui/joy/FormLabel';
-import Link from '@mui/joy/Link';
-import Input from '@mui/joy/Input';
-import Select from '@mui/joy/Select';
-import Option from '@mui/joy/Option';
-import Table from '@mui/joy/Table';
-import Sheet from '@mui/joy/Sheet';
-import Typography from '@mui/joy/Typography';
+import {
+  Avatar,
+  Box,
+  Chip,
+  FormControl,
+  FormLabel,
+  Input,
+  Select,
+  Option,
+  Table,
+  Sheet,
+  Typography,
+  Link,
+} from '@mui/joy';
 
 import SearchIcon from '@mui/icons-material/Search';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
@@ -20,8 +22,30 @@ import BlockIcon from '@mui/icons-material/Block';
 import AutorenewRoundedIcon from '@mui/icons-material/AutorenewRounded';
 
 import db from '../assets/db.json';
+import { cleanString, isDateInPastOrFuture } from '../utils';
 
 type DataFields = keyof (typeof db.reservations)[0];
+type Order = 'asc' | 'desc';
+interface FilterObject {
+  customerName: string;
+  status: string;
+  date: string;
+  shift: string;
+  area: string;
+}
+
+const COLUMNS: { id: DataFields; label: string }[] = [
+  { id: 'id', label: 'Reservation #' },
+  { id: 'businessDate', label: 'Business date' },
+  { id: 'status', label: 'Status' },
+  { id: 'shift', label: 'Shift' },
+  { id: 'start', label: 'Start date' },
+  { id: 'end', label: 'End date' },
+  { id: 'quantity', label: 'Quantity' },
+  { id: 'customer', label: 'Customer' },
+  { id: 'area', label: 'Area' },
+  { id: 'guestNotes', label: 'Guest Notes' },
+];
 
 function descendingComparator<T>(a: T, b: T, orderBy: keyof T) {
   if (b[orderBy] < a[orderBy]) {
@@ -32,8 +56,6 @@ function descendingComparator<T>(a: T, b: T, orderBy: keyof T) {
   }
   return 0;
 }
-
-type Order = 'asc' | 'desc';
 
 function getComparator<Key extends keyof any>(
   order: Order,
@@ -47,108 +69,42 @@ function getComparator<Key extends keyof any>(
     : (a, b) => -descendingComparator(a, b, orderBy);
 }
 
-const COLUMNS: { id: DataFields; label: string }[] = [
-  {
-    id: 'id',
-    label: 'Reservation #',
-  },
-  {
-    id: 'businessDate',
-    label: 'Business date',
-  },
-  {
-    id: 'status',
-    label: 'Status',
-  },
-  {
-    id: 'shift',
-    label: 'Shift',
-  },
-  {
-    id: 'start',
-    label: 'Start date',
-  },
-  {
-    id: 'end',
-    label: 'End date',
-  },
-  {
-    id: 'quantity',
-    label: 'Quantity',
-  },
-  {
-    id: 'customer',
-    label: 'Customer',
-  },
-  {
-    id: 'area',
-    label: 'Area',
-  },
-  {
-    id: 'guestNotes',
-    label: 'Guest Notes',
-  },
-];
-
 export default function OrderTable() {
   const [order, setOrder] = useState<Order>('asc');
-  db.reservations;
   const [orderBy, setOrderBy] = useState<DataFields>('id');
-  const renderFilters = () => (
-    <Fragment>
-      <FormControl size="sm">
-        <FormLabel>Status</FormLabel>
-        <Select
-          size="sm"
-          placeholder="Filter by status"
-          slotProps={{ button: { sx: { whiteSpace: 'nowrap' } } }}
-        >
-          <Option value="confirmed">Confirmed</Option>
-          <Option value="seated">Seated</Option>
-          <Option value="checkedOut">Checked out</Option>
-          <Option value="notConfirmed">Not confirmed</Option>
-        </Select>
-      </FormControl>
-      <FormControl size="sm">
-        <FormLabel>Date</FormLabel>
-        <Select size="sm" placeholder="Filter by date">
-          <Option value="past">Past</Option>
-          <Option value="future">Future</Option>
-        </Select>
-      </FormControl>
-      <FormControl size="sm">
-        <FormLabel>Shifts</FormLabel>
-        <Select size="sm" placeholder="Filter by shift">
-          <Option value="breakfast">Breakfast</Option>
-          <Option value="lunch">Lunch</Option>
-          <Option value="dinner">Dinner</Option>
-        </Select>
-      </FormControl>
-      <FormControl size="sm">
-        <FormLabel>Area</FormLabel>
-        <Select size="sm" placeholder="Filter by area">
-          <Option value="bar">BAR</Option>
-          <Option value="lunch">MAIN ROOM</Option>
-        </Select>
-      </FormControl>
-    </Fragment>
+  const [filterObject, setFilterObject] = useState<FilterObject>({
+    customerName: '',
+    status: '',
+    date: '',
+    shift: '',
+    area: '',
+  });
+
+  const transformedData = useMemo(
+    () =>
+      db.reservations.map((res) => ({
+        ...res,
+        customer: `${res.customer.firstName} ${res.customer.lastName}`,
+      })),
+    []
   );
+
+  const filteredData = useMemo(() => {
+    const cleanedCustomerName = cleanString(filterObject.customerName);
+    return transformedData.filter((row) => {
+      return (
+        row.customer.toLowerCase().includes(cleanedCustomerName) &&
+        (!filterObject.status || row.status === filterObject.status) &&
+        (!filterObject.shift || row.shift === filterObject.shift) &&
+        (!filterObject.area || row.area === filterObject.area) &&
+        (!filterObject.date ||
+          isDateInPastOrFuture(row.businessDate) === filterObject.date)
+      );
+    });
+  }, [filterObject, transformedData]);
+
   return (
     <Fragment>
-      <Sheet
-        sx={{
-          display: { xs: 'flex', sm: 'none' },
-          my: 1,
-          gap: 1,
-        }}
-      >
-        <Input
-          size="sm"
-          placeholder="Search"
-          startDecorator={<SearchIcon />}
-          sx={{ flexGrow: 1 }}
-        />
-      </Sheet>
       <Box
         className="SearchAndFilters-tabletUp"
         sx={{
@@ -168,9 +124,93 @@ export default function OrderTable() {
             size="sm"
             placeholder="Search"
             startDecorator={<SearchIcon />}
+            value={filterObject.customerName}
+            onChange={(e) =>
+              setFilterObject((prev) => ({
+                ...prev,
+                customerName: e.target.value,
+              }))
+            }
           />
         </FormControl>
-        {renderFilters()}
+        <Fragment>
+          <FormControl size="sm">
+            <FormLabel>Status</FormLabel>
+            <Select
+              size="sm"
+              placeholder="Filter by status"
+              onChange={(_, newValue) =>
+                setFilterObject((prev) => ({
+                  ...prev,
+                  status: newValue as string,
+                }))
+              }
+              value={filterObject.status}
+            >
+              {['CONFIRMED', 'SEATED', 'CHECKED OUT', 'NOT CONFIRMED'].map(
+                (status) => (
+                  <Option key={status} value={status}>
+                    {status}
+                  </Option>
+                )
+              )}
+            </Select>
+          </FormControl>
+          <FormControl size="sm">
+            <FormLabel>Date</FormLabel>
+            <Select
+              size="sm"
+              placeholder="Filter by date"
+              onChange={(_, newValue) =>
+                setFilterObject((prev) => ({
+                  ...prev,
+                  date: newValue as string,
+                }))
+              }
+              value={filterObject.date}
+            >
+              <Option value="past">Past</Option>
+              <Option value="future">Future</Option>
+            </Select>
+          </FormControl>
+          <FormControl size="sm">
+            <FormLabel>Shifts</FormLabel>
+            <Select
+              size="sm"
+              placeholder="Filter by shift"
+              onChange={(_, newValue) =>
+                setFilterObject((prev) => ({
+                  ...prev,
+                  shift: newValue as string,
+                }))
+              }
+              value={filterObject.shift}
+            >
+              {['BREAKFAST', 'LUNCH', 'DINNER'].map((shift) => (
+                <Option key={shift} value={shift}>
+                  {shift}
+                </Option>
+              ))}
+            </Select>
+          </FormControl>
+          <FormControl size="sm">
+            <FormLabel>Area</FormLabel>
+            <Select
+              size="sm"
+              placeholder="Filter by area"
+              onChange={(_, newValue) =>
+                setFilterObject((prev) => ({
+                  ...prev,
+                  area: newValue as string,
+                }))
+              }
+              value={filterObject.area}
+            >
+              <Option value="BAR">BAR</Option>
+              <Option value="LUNCH">MAIN ROOM</Option>
+            </Select>
+          </FormControl>
+        </Fragment>
       </Box>
       <Sheet
         className="OrderTableContainer"
@@ -201,7 +241,7 @@ export default function OrderTable() {
           <thead>
             <tr>
               {COLUMNS.map((column) => (
-                <th style={{ width: 120, padding: '12px 6px' }}>
+                <th key={column.id} style={{ width: 120, padding: '12px 6px' }}>
                   <Link
                     underline="none"
                     color="primary"
@@ -227,11 +267,7 @@ export default function OrderTable() {
             </tr>
           </thead>
           <tbody>
-            {db.reservations
-              .map((res) => ({
-                ...res,
-                customer: `${res.customer.firstName} ${res.customer.lastName}`,
-              }))
+            {filteredData
               .slice()
               .sort(getComparator(order, orderBy))
               .map((row) => (
