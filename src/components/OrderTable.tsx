@@ -13,6 +13,7 @@ import {
   Sheet,
   Typography,
   Link,
+  Button,
 } from '@mui/joy';
 
 import SearchIcon from '@mui/icons-material/Search';
@@ -20,6 +21,7 @@ import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import CheckRoundedIcon from '@mui/icons-material/CheckRounded';
 import BlockIcon from '@mui/icons-material/Block';
 import AutorenewRoundedIcon from '@mui/icons-material/AutorenewRounded';
+import DeleteIcon from '@mui/icons-material/Delete';
 
 import db from '../assets/db.json';
 import { cleanString, isDateInPastOrFuture } from '../utils';
@@ -33,6 +35,14 @@ interface FilterObject {
   shift: string;
   area: string;
 }
+
+const initialState: FilterObject = {
+  customerName: '',
+  status: '',
+  date: '',
+  shift: '',
+  area: '',
+};
 
 const COLUMNS: { id: DataFields; label: string }[] = [
   { id: 'id', label: 'Reservation #' },
@@ -72,13 +82,7 @@ function getComparator<Key extends keyof any>(
 export default function OrderTable() {
   const [order, setOrder] = useState<Order>('asc');
   const [orderBy, setOrderBy] = useState<DataFields>('id');
-  const [filterObject, setFilterObject] = useState<FilterObject>({
-    customerName: '',
-    status: '',
-    date: '',
-    shift: '',
-    area: '',
-  });
+  const [filterObject, setFilterObject] = useState<FilterObject>(initialState);
 
   const transformedData = useMemo(
     () =>
@@ -210,6 +214,21 @@ export default function OrderTable() {
               <Option value="LUNCH">MAIN ROOM</Option>
             </Select>
           </FormControl>
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'end',
+              justifyContent: 'flex-end',
+            }}
+          >
+            <Button
+              onClick={() => setFilterObject(initialState)}
+              startDecorator={<DeleteIcon />}
+              size="sm"
+            >
+              Clear filters
+            </Button>
+          </Box>
         </Fragment>
       </Box>
       <Sheet
